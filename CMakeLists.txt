@@ -29,4 +29,7 @@ if (BUILD_TESTS)
     
     add_executable(test_obstacle_map tests/test_obstacle_map.cpp)
     target_link_libraries(test_obstacle_map PRIVATE HybridAStar)
+    
+    add_executable(test_a_star tests/test_a_star.cpp)
+    target_link_libraries(test_a_star PRIVATE HybridAStar)
 endif()
