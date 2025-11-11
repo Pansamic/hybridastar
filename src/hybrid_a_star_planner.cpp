@@ -94,6 +94,9 @@ HybridAStarPlanner::ErrorCode HybridAStarPlanner::setMapParameters(
     obstacle_tree_.reset();
     obstacle_tree_ = std::make_unique<KDTree>(obstacles);
 
+    auto map_obstacles_copy = map_obstacles_;
+    a_star_planner_.setMapParameters(map_resolution, map_x_min, map_y_min, map_x_max, map_y_max, std::move(map_obstacles_copy));
+
     return ErrorCode::SUCCESS;
 }
 
@@ -264,28 +267,25 @@ float HybridAStarPlanner::calculateGCost(const Node& prev_node, const MotionComm
     return cost;
 }
 
-float HybridAStarPlanner::calculateHuristicCost(const Node& current_node, const Node& goal_node) const
+float HybridAStarPlanner::calculateHuristicCost(const Node& current_node, const Node& goal_node)
 {
     // Calculate 2D A star distance.
     std::array<float, 2> start_pos_2d{current_node.x, current_node.y};
     std::array<float, 2> goal_pos_2d{goal_node.x, goal_node.y};
-    
-    // Create a temporary AStarPlanner instance with the map parameters
-    AStarPlanner a_star_planner;
-    auto map_obstacles_copy = map_obstacles_;
-    a_star_planner.setMapParameters(map_resolution_, map_x_min_, map_y_min_, map_x_max_, map_y_max_, std::move(map_obstacles_copy));
-    auto a_star_result = a_star_planner.findPath(start_pos_2d, goal_pos_2d);
+
+    auto a_star_result = a_star_planner_.findPath(start_pos_2d, goal_pos_2d);
     if (!a_star_result.has_value())
     {
         return std::numeric_limits<float>::max();
     }
     auto a_star_end_node_ptr = a_star_result.value();
-    auto a_star_path_result = a_star_planner.getPathLength(a_star_end_node_ptr);
+    auto a_star_path_result = a_star_planner_.getPathLength(a_star_end_node_ptr);
     if (!a_star_path_result.has_value())
     {
         return std::numeric_limits<float>::max();
     }
     float distance_cost = a_star_path_result.value();
+
     // To avoid creating a new A* planner every time, we'll use a more efficient huristic like Euclidean distance
     // float dx = goal_node.x - current_node.x;
     // float dy = goal_node.y - current_node.y;

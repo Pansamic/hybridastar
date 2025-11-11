@@ -186,7 +186,7 @@ private:
     std::expected<std::array<float, 3>, ErrorCode> getExpandedState(const Node& current_node, const MotionCommand& motion_command);
     std::expected<Node*, ErrorCode> getDubinsShot(Node* start_node, Node* goal_node);
     float calculateGCost(const Node& prev_node, const MotionCommand& motion_command) const;
-    float calculateHuristicCost(const Node& current_node, const Node& goal_node) const;
+    float calculateHuristicCost(const Node& current_node, const Node& goal_node);
     std::vector<std::array<float, 3>> getPathWaypoints(const Node* end_node_ptr);
     std::expected<const Node*, ErrorCode> findPath(const std::array<float, 3>& start_state, const std::array<float, 3>& goal_state);
 };
