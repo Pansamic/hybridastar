@@ -16,6 +16,7 @@ add_library(HybridAStar STATIC
     src/dubins_curve.cpp
     src/hybrid_a_star_planner.cpp
     src/kdtree.cpp
+    src/data_saver.cpp
 )
 
 target_include_directories(HybridAStar PUBLIC
