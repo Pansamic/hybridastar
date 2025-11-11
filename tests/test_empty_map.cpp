@@ -4,8 +4,8 @@
 static const std::size_t kNumDirectionDivision = 72;
 static const float kStepLength = 0.2;
 
-static const float kVehicleMaxSteeringAngle = 0.6;
-static const float kVehicleSteerPrecision = 10;
+static const float kVehicleMaxSteeringAngle = M_PI_4;
+static const float kVehicleSteerPrecision = 4.0;
 static const float kVehicleWheelbase = 1;
 static const float kVehicleAxleToFront = 0.5;
 static const float kVehicleAxleToRear = 0.5;

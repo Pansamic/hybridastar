@@ -2,7 +2,6 @@
 #include <expected>
 #include <queue>
 #include <dubins_curve.h>
-
 #include <hybrid_a_star_planner.h>
 
 void HybridAStarPlanner::setConfigParameters(std::size_t num_direction_division, float step_length)
@@ -187,6 +186,9 @@ HybridAStarPlanner::findPath(const std::array<float, 3>& start_state, const std:
             }
 
             // Build complete node.
+            successive_node.x = expansion_state[0];
+            successive_node.y = expansion_state[1];
+            successive_node.yaw = expansion_state[2];
             successive_node.cost_g = calculateGCost(current_node, motion_command);
             successive_node.cost_h = calculateHuristicCost(successive_node, goal_node);
             successive_node.motion = &motion_command;
@@ -206,7 +208,7 @@ std::size_t HybridAStarPlanner::getNodeID(float x, float y, float yaw)
 {
     auto [row, col] = calculateGridIndexFromCoordinate(x, y);
 
-    return (row * config_rotation_degree_step_ + col * map_grid_rows_ * config_rotation_degree_step_ + static_cast<std::size_t>(getPositiveNormalizedRadianAngle(yaw) / config_rotation_degree_step_));
+    return (row * config_num_direction_division_ + col * map_grid_rows_ * config_num_direction_division_ + static_cast<std::size_t>(getPositiveNormalizedRadianAngle(yaw) / config_rotation_radian_step_));
 }
 
 void HybridAStarPlanner::initializeMotionCommands()
@@ -311,9 +313,9 @@ HybridAStarPlanner::getExpandedState(const Node& current_node, const MotionComma
     const float move_dir = static_cast<float>(motion_command.direction);
     const float& move_rot = motion_command.rotation;
 
-    expanded_state[0] = current_node.x + config_step_length_ * std::cos(current_yaw) * move_dir;
-    expanded_state[1] = current_node.y + config_step_length_ * std::sin(current_yaw) * move_dir;
-    expanded_state[2] = getPositiveNormalizedRadianAngle(current_yaw + move_rot * move_dir);
+    expanded_state[0] = current_x + config_step_length_ * std::cos(current_yaw) * move_dir;
+    expanded_state[1] = current_y + config_step_length_ * std::sin(current_yaw) * move_dir;
+    expanded_state[2] = getPositiveNormalizedRadianAngle(current_yaw + move_rot);
     
     return expanded_state;
 }
