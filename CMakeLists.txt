@@ -23,6 +23,9 @@ target_include_directories(HybridAStar PUBLIC
 )
 
 if (BUILD_TESTS)
-    add_executable(test_hybrid_a_star tests/test_hybrid_a_star.cpp)
-    target_link_libraries(test_hybrid_a_star PRIVATE HybridAStar)
+    add_executable(test_empty_map tests/test_empty_map.cpp)
+    target_link_libraries(test_empty_map PRIVATE HybridAStar)
+    
+    add_executable(test_obstacle_map tests/test_obstacle_map.cpp)
+    target_link_libraries(test_obstacle_map PRIVATE HybridAStar)
 endif()

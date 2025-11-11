@@ -4,19 +4,19 @@
 static const std::size_t kNumDirectionDivision = 72;
 static const float kStepLength = 0.2;
 
-static const float kVehicleMaxSteeringAngle = 0.5;
-static const float kVehicleSteerPrecision = 0.1;
-static const float kVehicleWheelbase = 2.0;
-static const float kVehicleAxleToFront = 1.0;
-static const float kVehicleAxleToRear = 1.0;
-static const float kVehicleWidth = 1.0;
+static const float kVehicleMaxSteeringAngle = 0.6;
+static const float kVehicleSteerPrecision = 10;
+static const float kVehicleWheelbase = 1;
+static const float kVehicleAxleToFront = 0.5;
+static const float kVehicleAxleToRear = 0.5;
+static const float kVehicleWidth = 0.7;
 static const bool kVehicleEnableReverse = false;
 
-static const float kCostWeightReverse = 1.0;
-static const float kCostWeightDirectionChange = 1.0;
+static const float kCostWeightReverse = 10.0;
+static const float kCostWeightDirectionChange = 150.0;
 static const float kCostWeightSteeringAngle = 1.0;
-static const float kCostWeightSteeringRate = 1.0;
-static const float kCostWeightHybrid = 1.0;
+static const float kCostWeightSteeringRate = 5.0;
+static const float kCostWeightHybrid = 50.0;
 
 static const float kMapResolution = 0.1;
 static const float kMapXMin = -10.0;

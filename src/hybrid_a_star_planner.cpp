@@ -206,7 +206,7 @@ std::size_t HybridAStarPlanner::getNodeID(float x, float y, float yaw)
 {
     auto [row, col] = calculateGridIndexFromCoordinate(x, y);
 
-    return (row + col * map_grid_rows_ + static_cast<std::size_t>(getPositiveNormalizedRadianAngle(yaw) / config_rotation_degree_step_));
+    return (row * config_rotation_degree_step_ + col * map_grid_rows_ * config_rotation_degree_step_ + static_cast<std::size_t>(getPositiveNormalizedRadianAngle(yaw) / config_rotation_degree_step_));
 }
 
 void HybridAStarPlanner::initializeMotionCommands()
@@ -229,8 +229,8 @@ std::tuple<float, float> HybridAStarPlanner::calculateCoordinateFromGridIndex(st
 
 std::tuple<std::size_t, std::size_t> HybridAStarPlanner::calculateGridIndexFromCoordinate(float x, float y) const
 {
-    std::size_t row = static_cast<std::size_t>(std::floor(x - map_x_min_) / map_resolution_);
-    std::size_t col = static_cast<std::size_t>(std::floor(y - map_y_min_) / map_resolution_);
+    std::size_t row = static_cast<std::size_t>(std::floor((x - map_x_min_) / map_resolution_));
+    std::size_t col = static_cast<std::size_t>(std::floor((y - map_y_min_) / map_resolution_));
     return std::make_tuple(row, col);
 }
 
@@ -240,7 +240,7 @@ float HybridAStarPlanner::calculateGCost(const Node& prev_node, const MotionComm
     float cost = prev_node.cost_g;
     
     // Cost1: step length
-    cost += static_cast<float>(motion_command.direction) * config_step_length_ * (motion_command.direction == -1) ? cost_weight_reverse_: 1;
+    cost += config_step_length_ * (motion_command.direction == -1) ? cost_weight_reverse_: 1;
 
     // Cost2: direction variance
     // check motion existance to prevent null pointer because start node has no motion command
@@ -250,7 +250,7 @@ float HybridAStarPlanner::calculateGCost(const Node& prev_node, const MotionComm
     }
 
     // Cost3: steering angle
-    cost += motion_command.rotation * cost_weight_steering_angle_;
+    cost += std::abs(motion_command.rotation) * cost_weight_steering_angle_;
 
     // Cost4: steering angle variance
     // check motion existance to prevent null pointer because start node has no motion command
@@ -267,6 +267,8 @@ float HybridAStarPlanner::calculateHuristicCost(const Node& current_node, const 
     // Calculate 2D A star distance.
     std::array<float, 2> start_pos_2d{current_node.x, current_node.y};
     std::array<float, 2> goal_pos_2d{goal_node.x, goal_node.y};
+    
+    // Create a temporary AStarPlanner instance with the map parameters
     AStarPlanner a_star_planner;
     auto map_obstacles_copy = map_obstacles_;
     a_star_planner.setMapParameters(map_resolution_, map_x_min_, map_y_min_, map_x_max_, map_y_max_, std::move(map_obstacles_copy));
@@ -282,7 +284,11 @@ float HybridAStarPlanner::calculateHuristicCost(const Node& current_node, const 
         return std::numeric_limits<float>::max();
     }
     float distance_cost = a_star_path_result.value();
-
+    // To avoid creating a new A* planner every time, we'll use a more efficient huristic like Euclidean distance
+    // float dx = goal_node.x - current_node.x;
+    // float dy = goal_node.y - current_node.y;
+    // float distance_cost = std::sqrt(dx * dx + dy * dy);
+    
     // Calculate dubins curve cost.
     double vehicle_turning_radius = vehicle_wheelbase_ / std::tan(vehicle_max_steering_angle_);
     DubinsCurve dubins;
@@ -302,12 +308,12 @@ HybridAStarPlanner::getExpandedState(const Node& current_node, const MotionComma
     const float& current_x = current_node.x;
     const float& current_y = current_node.y;
     const float& current_yaw = current_node.yaw;
-    const int& move_dir = motion_command.direction;
+    const float move_dir = static_cast<float>(motion_command.direction);
     const float& move_rot = motion_command.rotation;
 
-    expanded_state[0] = current_node.x + config_step_length_ * std::cos(current_yaw) * static_cast<float>(move_dir);
-    expanded_state[1] = current_node.y + config_step_length_ * std::sin(current_yaw) * static_cast<float>(move_dir);
-    expanded_state[2] = getPositiveNormalizedRadianAngle(current_yaw + move_rot * static_cast<float>(move_dir));
+    expanded_state[0] = current_node.x + config_step_length_ * std::cos(current_yaw) * move_dir;
+    expanded_state[1] = current_node.y + config_step_length_ * std::sin(current_yaw) * move_dir;
+    expanded_state[2] = getPositiveNormalizedRadianAngle(current_yaw + move_rot * move_dir);
     
     return expanded_state;
 }
@@ -354,6 +360,7 @@ HybridAStarPlanner::getDubinsShot(Node* start_node, Node* goal_node)
         {
             node.parent = &dubins_path_node_pool_[dubins_path_node_pool_.size()-2];
         }
+        dubins_sample_length += dubins_step_length;
     }
     return &dubins_path_node_pool_[dubins_path_node_pool_.size()-1];
 }
@@ -458,8 +465,8 @@ inline bool HybridAStarPlanner::isNodeXYTEqual(const Node& node_a, const Node& n
 {
     return (static_cast<int>(node_a.x / map_resolution_) == static_cast<int>(node_b.x / map_resolution_)) &&
             (static_cast<int>(node_a.y / map_resolution_) == static_cast<int>(node_b.y / map_resolution_)) &&
-            (std::abs(node_a.yaw - node_b.yaw) <= config_rotation_degree_step_ ||
-            std::abs(node_a.yaw - node_b.yaw) >= config_rotation_degree_step_negative_);
+            (std::abs(node_a.yaw - node_b.yaw) <= config_rotation_radian_step_ ||
+            std::abs(node_a.yaw - node_b.yaw) >= config_rotation_radian_step_negative_);
 }
 
 std::vector<std::array<float, 3>> HybridAStarPlanner::getPathWaypoints(const Node* end_node_ptr)
