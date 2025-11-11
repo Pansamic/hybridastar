@@ -352,6 +352,10 @@ HybridAStarPlanner::getDubinsShot(Node* start_node, Node* goal_node)
     {
         std::array<double, 3> state;
         dubins.pathSample(dubins_sample_length, state);
+        if (!checkGeometry(state[0], state[1], state[2]) || checkCollision(state[0], state[1], state[2]))
+        {
+            return std::unexpected(ErrorCode::NO_PATH);
+        }
         Node& node = dubins_path_node_pool_.emplace_back(state[0], state[1], state[2]);
         if (is_first)
         {
