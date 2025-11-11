@@ -1,0 +1,28 @@
+cmake_minimum_required(VERSION 3.10)
+
+project(HybridAStar
+    VERSION 1.0.0
+    LANGUAGES C CXX
+)
+
+option(BUILD_TESTS "Build tests" ON)
+
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Changed from INTERFACE to STATIC to actually compile the source files
+add_library(HybridAStar STATIC
+    src/a_star_planner.cpp
+    src/dubins_curve.cpp
+    src/hybrid_a_star_planner.cpp
+    src/kdtree.cpp
+)
+
+target_include_directories(HybridAStar PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+if (BUILD_TESTS)
+    add_executable(test_hybrid_a_star tests/test_hybrid_a_star.cpp)
+    target_link_libraries(test_hybrid_a_star PRIVATE HybridAStar)
+endif()
