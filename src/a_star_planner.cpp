@@ -144,8 +144,8 @@ inline std::tuple<float, float> AStarPlanner::calculateCoordinateFromGridIndex(s
 
 inline std::tuple<std::size_t, std::size_t> AStarPlanner::calculateGridIndexFromCoordinate(float x, float y) const
 {
-    std::size_t row = static_cast<std::size_t>(std::floor(x - map_x_min_) / map_resolution_);
-    std::size_t col = static_cast<std::size_t>(std::floor(y - map_y_min_) / map_resolution_);
+    std::size_t row = static_cast<std::size_t>(std::floor((x - map_x_min_) / map_resolution_));
+    std::size_t col = static_cast<std::size_t>(std::floor((y - map_y_min_) / map_resolution_));
     return std::make_tuple(row, col);
 }
 
