@@ -1,5 +1,3 @@
-
-#include <expected>
 #include <queue>
 #include <hybridastar/dubins_curve.h>
 #include <hybridastar/hybrid_a_star_planner.h>
