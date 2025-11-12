@@ -8,7 +8,7 @@
 #include <array>
 #include <vector>
 #include <memory>
-#include <kdtree.hpp>
+#include <hybridastar/kdtree.hpp>
 #include <Eigen/Core>
 
 class AStarPlanner final

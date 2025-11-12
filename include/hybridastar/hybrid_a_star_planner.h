@@ -9,8 +9,8 @@
 #include <vector>
 #include <memory>
 #include <Eigen/Core>
-#include <kdtree.hpp>
-#include <a_star_planner.h>
+#include <hybridastar/kdtree.hpp>
+#include <hybridastar/a_star_planner.h>
 
 class HybridAStarPlanner final
 {

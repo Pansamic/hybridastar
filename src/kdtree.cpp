@@ -17,7 +17,7 @@
 #include <memory>
 #include <vector>
 
-#include <kdtree.hpp>
+#include <hybridastar/kdtree.hpp>
 
 KDNode::KDNode() = default;
 

@@ -3,7 +3,7 @@
 #include <random>
 #include <Eigen/Core>
 #include <data_saver.hpp>
-#include <a_star_planner.h>
+#include <hybridastar/a_star_planner.h>
 
 static const float kMapResolution = 0.1;
 static const float kMapXMin = -10.0;

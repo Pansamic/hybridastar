@@ -1,5 +1,5 @@
 #include <queue>
-#include <a_star_planner.h>
+#include <hybridastar/a_star_planner.h>
 
 const std::array<std::array<int8_t, 2>, 8> AStarPlanner::motion_commands_ =
 {{

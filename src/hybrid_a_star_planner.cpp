@@ -1,8 +1,8 @@
 
 #include <expected>
 #include <queue>
-#include <dubins_curve.h>
-#include <hybrid_a_star_planner.h>
+#include <hybridastar/dubins_curve.h>
+#include <hybridastar/hybrid_a_star_planner.h>
 
 void HybridAStarPlanner::setConfigParameters(std::size_t num_direction_division, float step_length)
 {

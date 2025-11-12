@@ -1,6 +1,6 @@
 #include <iostream>
 #include <filesystem>
-#include <hybrid_a_star_planner.h>
+#include <hybridastar/hybrid_a_star_planner.h>
 #include <data_saver.hpp>
 
 static const std::size_t kNumDirectionDivision = 36;

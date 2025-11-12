@@ -1,8 +1,7 @@
 #include <iostream>
-#include <a_star_planner.h>
 #include <random>
 #include <Eigen/Core>
-
+#include <hybridastar/a_star_planner.h>
 static const float kMapResolution = 0.1;
 static const float kMapXMin = -10.0;
 static const float kMapYMin = -10.0;

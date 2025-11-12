@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#include "dubins_curve.h"
+#include "hybridastar/dubins_curve.h"
 #define _USE_MATH_DEFINES
 #include <limits>
 #include <cmath>
