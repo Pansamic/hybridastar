@@ -10,6 +10,10 @@ option(BUILD_TESTS "Build tests" ON)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if (NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build, options are: Debug Release MinSizeRel RelWithDebInfo." FORCE)
+endif()
+
 find_package(Eigen3 3.3 REQUIRED)
 
 # Changed from INTERFACE to STATIC to actually compile the source files
