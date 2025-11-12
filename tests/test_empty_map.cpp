@@ -1,4 +1,5 @@
 #include <iostream>
+#include <filesystem>
 #include <hybrid_a_star_planner.h>
 #include <data_saver.h>
 
@@ -48,6 +49,7 @@ int main()
 
     // Save map and path data to binary file
     MapAndPathData data;
+    data.algorithm_type = AlgorithmType::HYBRID_ASTAR;
     data.resolution = kMapResolution;
     data.x_min = kMapXMin;
     data.x_max = kMapXMax;
@@ -71,6 +73,9 @@ int main()
 
     // Save to binary file
     std::string filename = "temp/test_empty_map.bin";
+
+    std::filesystem::create_directories(std::filesystem::path(filename).parent_path());
+
     if (DataSaver::saveMapAndPath(filename, data))
     {
         std::cout << "Data saved to " << filename << std::endl;

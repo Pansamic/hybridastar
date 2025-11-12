@@ -12,8 +12,47 @@ def load_map_and_path_data(filename):
     """
     Load map and path data from the binary file
     """
+    file_size = os.path.getsize(filename)
+    
+    # Calculate expected size for the new format (with algorithm type)
+    # Just read part of the file to determine format
     with open(filename, 'rb') as f:
-        # Read map parameters (7 floats + 2 sizes)
+        # Peek at the file to check if algorithm type is present
+        try:
+            # Try to read algorithm type (new format)
+            algorithm_type = struct.unpack('i', f.read(4))[0]
+        except struct.error:
+            # If we can't read algorithm type, file is too short or corrupted
+            # This could mean it's in old format or malformed, let's handle this better
+            f.seek(0)  # Reset
+            
+            # Read first few values to determine the format based on plausibility
+            try:
+                # Attempt to read as if it's the old format (first item is resolution)
+                resolution = struct.unpack('f', f.read(4))[0]
+                x_min = struct.unpack('f', f.read(4))[0]
+                x_max = struct.unpack('f', f.read(4))[0]
+                y_min = struct.unpack('f', f.read(4))[0]
+                y_max = struct.unpack('f', f.read(4))[0]
+                rows = struct.unpack('Q', f.read(8))[0]
+                cols = struct.unpack('Q', f.read(8))[0]
+                
+                # Check if these values are plausible for map parameters
+                if (abs(resolution) <= 100 and abs(x_min) <= 100 and abs(x_max) <= 100 and 
+                    abs(y_min) <= 100 and abs(y_max) <= 100 and rows <= 10000 and cols <= 10000):
+                    # This looks like the old format, restart and process correctly
+                    f.seek(0)
+                    algorithm_type = 1  # Default to Hybrid A* for old format
+                else:
+                    # This might be an algorithm type instead of resolution, use the new format approach
+                    # This is likely a complex case; let's try the new format approach
+                    f.seek(0)
+                    algorithm_type = struct.unpack('i', f.read(4))[0]
+            except struct.error:
+                raise ValueError("Invalid or truncated file")
+        
+        # Now continue with reading based on the algorithm type we identified
+        # Read map parameters
         resolution = struct.unpack('f', f.read(4))[0]
         x_min = struct.unpack('f', f.read(4))[0]
         x_max = struct.unpack('f', f.read(4))[0]
@@ -51,6 +90,7 @@ def load_map_and_path_data(filename):
         vehicle_width = struct.unpack('f', f.read(4))[0]
 
         return {
+            'algorithm_type': algorithm_type,
             'map': map_data,
             'resolution': resolution,
             'x_min': x_min,
@@ -127,23 +167,39 @@ def visualize_map_and_path(filename):
         ax.plot(path_x, path_y, 'b-', linewidth=2, label='Path', alpha=0.7)
         ax.scatter(path_x[0], path_y[0], color='green', s=100, label='Start', zorder=5)
         ax.scatter(path_x[-1], path_y[-1], color='red', s=100, label='Goal', zorder=5)
+
+        # Draw vehicle models along the path - only draw some to avoid clutter
+        # For A*, we don't draw orientation-sensitive car models; for Hybrid A*, we do
+        step = max(1, len(path_x) // 20)  # Draw about 20 vehicles max
         
-        # Draw car models along the path - only draw some to avoid clutter
-        step = max(1, len(path_x) // 20)  # Draw about 20 cars max
-        for i in range(0, len(path_x), step):
-            draw_car(ax, path_x[i], path_y[i], path_theta[i], data, 
-                    color='blue', alpha=0.5)
-        
-        # Draw car at start and end positions more prominently
-        if len(path_x) > 0:
-            draw_car(ax, path_x[0], path_y[0], path_theta[0], data, 
-                    color='green', alpha=1.0)
-            draw_car(ax, path_x[-1], path_y[-1], path_theta[-1], data, 
-                    color='red', alpha=1.0)
-    
+        if data['algorithm_type'] == 1:  # Hybrid A*
+            # Draw car models with orientation for Hybrid A*
+            for i in range(0, len(path_x), step):
+                draw_car(ax, path_x[i], path_y[i], path_theta[i], data, 
+                        color='blue', alpha=0.5)
+
+            # Draw car at start and end positions more prominently
+            if len(path_x) > 0:
+                draw_car(ax, path_x[0], path_y[0], path_theta[0], data, 
+                        color='green', alpha=1.0)
+                draw_car(ax, path_x[-1], path_y[-1], path_theta[-1], data, 
+                        color='red', alpha=1.0)
+        else:  # A*
+            # For A* path, just draw circles since there's no orientation (theta = 0 for all points)
+            for i in range(0, len(path_x), step):
+                ax.plot(path_x[i], path_y[i], 's', color='orange', markersize=6, alpha=0.5)
+
+            # Draw start and end positions more prominently for A*
+            if len(path_x) > 0:
+                ax.plot(path_x[0], path_y[0], 's', color='green', markersize=10, alpha=1.0)
+                ax.plot(path_x[-1], path_y[-1], 's', color='red', markersize=10, alpha=1.0)
+
     ax.set_xlabel('X (m)')
     ax.set_ylabel('Y (m)')
-    ax.set_title('Hybrid A* Path Planning Visualization')
+    
+    # Set title based on algorithm type
+    algorithm_name = "A*" if data['algorithm_type'] == 0 else "Hybrid A*"
+    ax.set_title(f'{algorithm_name} Path Planning Visualization')
     ax.legend()
     ax.grid(True, alpha=0.3)
     

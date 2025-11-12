@@ -7,8 +7,16 @@
 #include <string>
 #include <Eigen/Core>
 
+enum class AlgorithmType {
+    ASTAR = 0,
+    HYBRID_ASTAR = 1
+};
+
 struct MapAndPathData
 {
+    // Algorithm type
+    AlgorithmType algorithm_type;
+    
     // Map parameters
     float resolution;
     float x_min, x_max;
@@ -19,9 +27,9 @@ struct MapAndPathData
     std::vector<uint8_t> map_data;
 
     // Path data
-    std::vector<std::array<float, 3>> path; // x, y, theta
+    std::vector<std::array<float, 3>> path; // x, y, theta for Hybrid A*, x, y, - for A*
 
-    // Vehicle parameters
+    // Vehicle parameters (only used for Hybrid A*, but stored for consistency)
     float vehicle_wheelbase;
     float vehicle_axle_to_front;
     float vehicle_axle_to_rear;

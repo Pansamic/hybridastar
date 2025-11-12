@@ -32,4 +32,7 @@ if (BUILD_TESTS)
     
     add_executable(test_a_star tests/test_a_star.cpp)
     target_link_libraries(test_a_star PRIVATE HybridAStar)
+    
+    add_executable(test_a_star_save tests/test_a_star_save.cpp)
+    target_link_libraries(test_a_star_save PRIVATE HybridAStar)
 endif()

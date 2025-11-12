@@ -8,6 +8,10 @@ bool DataSaver::saveMapAndPath(const std::string &filename, const MapAndPathData
         return false;
     }
 
+    // Write algorithm type
+    auto algorithm_type_val = static_cast<int>(data.algorithm_type);
+    file.write(reinterpret_cast<const char *>(&algorithm_type_val), sizeof(algorithm_type_val));
+
     // Write map parameters
     file.write(reinterpret_cast<const char *>(&data.resolution), sizeof(data.resolution));
     file.write(reinterpret_cast<const char *>(&data.x_min), sizeof(data.x_min));
@@ -53,6 +57,11 @@ MapAndPathData DataSaver::loadMapAndPath(const std::string &filename)
     {
         return data;
     }
+
+    // Read algorithm type
+    int algorithm_type_val;
+    file.read(reinterpret_cast<char *>(&algorithm_type_val), sizeof(algorithm_type_val));
+    data.algorithm_type = static_cast<AlgorithmType>(algorithm_type_val);
 
     // Read map parameters
     file.read(reinterpret_cast<char *>(&data.resolution), sizeof(data.resolution));
