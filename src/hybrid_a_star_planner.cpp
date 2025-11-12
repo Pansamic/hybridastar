@@ -59,8 +59,8 @@ bool HybridAStarPlanner::setMapParameters(
     map_y_min_ = map_y_min;
     map_x_max_ = map_x_max;
     map_y_max_ = map_y_max;
-    map_grid_rows_ = static_cast<std::size_t>(std::ceil((map_y_max - map_y_min) / map_resolution));
-    map_grid_cols_ = static_cast<std::size_t>(std::ceil((map_x_max - map_x_min) / map_resolution));
+    map_grid_rows_ = static_cast<std::size_t>(std::round((map_y_max - map_y_min) / map_resolution));
+    map_grid_cols_ = static_cast<std::size_t>(std::round((map_x_max - map_x_min) / map_resolution));
 
     if (map_grid_rows_ != map_obstacles.rows() || map_grid_cols_ != map_obstacles.cols())
     {
@@ -100,6 +100,10 @@ bool HybridAStarPlanner::setMapParameters(
 
 HybridAStarPlanner::Node* HybridAStarPlanner::findPath(const std::array<float, 3>& start_state, const std::array<float, 3>& goal_state)
 {
+    if (!checkGeometry(start_state[0], start_state[1], start_state[2]) || !checkGeometry(goal_state[0], goal_state[1], goal_state[2]))
+    {
+        return nullptr;
+    }
     // Setup a maximum iteration count to avoid infinite loops
     const std::size_t max_iterations = 10000;
     std::size_t iterations = 0;
