@@ -107,7 +107,7 @@ def load_map_and_path_data(filename):
         }
 
 
-def draw_car(ax, x, y, theta, vehicle_params, color='red', alpha=0.7):
+def draw_car(ax, x, y, theta, vehicle_params, color='red', alpha=0.7, draw_direction=True):
     """
     Draw a rectangular car model at position (x, y) with orientation theta
     """
@@ -126,23 +126,30 @@ def draw_car(ax, x, y, theta, vehicle_params, color='red', alpha=0.7):
         (-half_length, -half_width),  # bottom-left corner relative to center
         total_length,                 # width (length of car)
         vehicle_params['vehicle_width'],  # height (width of car)
-        angle=np.degrees(theta),      # rotation angle in degrees
+        angle=0,                      # no rotation needed (handled by transform)
         rotation_point='center',      # rotate around the center
         facecolor=color,
         edgecolor='black',
         alpha=alpha
     )
-    
+
     # Apply the transformation to move to the actual position
     t = plt.matplotlib.transforms.Affine2D().rotate(theta) + plt.matplotlib.transforms.Affine2D().translate(center_x, center_y)
     car_rect.set_transform(t + ax.transData)
     
     ax.add_patch(car_rect)
     
-    # Optional: Draw a small indicator for the front of the car
-    front_x = x + total_length * np.cos(theta)
-    front_y = y + total_length * np.sin(theta)
-    ax.plot(front_x, front_y, 'o', color='yellow', markersize=3)
+    # Draw an arrow inside the car to indicate direction
+    if draw_direction:
+        # Arrow starts from the center of the car and points forward
+        arrow_length = half_length * 0.6  # 60% of half the car length
+        start_x = center_x - half_length/3 * np.cos(theta)  # back of the arrow
+        start_y = center_y - half_length/3 * np.sin(theta)
+        end_x = start_x + arrow_length * np.cos(theta)
+        end_y = start_y + arrow_length * np.sin(theta)
+        
+        ax.annotate('', xy=(end_x, end_y), xytext=(start_x, start_y),
+                   arrowprops=dict(arrowstyle='->', color='white', lw=2))
 
 
 def visualize_map_and_path(filename):
@@ -176,14 +183,14 @@ def visualize_map_and_path(filename):
             # Draw car models with orientation for Hybrid A*
             for i in range(0, len(path_x), step):
                 draw_car(ax, path_x[i], path_y[i], path_theta[i], data, 
-                        color='blue', alpha=0.5)
+                        color='blue', alpha=0.5, draw_direction=True)
 
-            # Draw car at start and end positions more prominently
+            # Draw car at start and end positions more prominently with rotation
             if len(path_x) > 0:
                 draw_car(ax, path_x[0], path_y[0], path_theta[0], data, 
-                        color='green', alpha=1.0)
+                        color='green', alpha=1.0, draw_direction=True)
                 draw_car(ax, path_x[-1], path_y[-1], path_theta[-1], data, 
-                        color='red', alpha=1.0)
+                        color='red', alpha=1.0, draw_direction=True)
         else:  # A*
             # For A* path, just draw circles since there's no orientation (theta = 0 for all points)
             for i in range(0, len(path_x), step):
