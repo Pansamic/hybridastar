@@ -93,14 +93,18 @@ AStarPlanner::findPath(const std::array<float, 2>& start_pos, const std::array<f
             {
                 continue;
             }
-            successive_node.row = expansion_position[0];
-            successive_node.col = expansion_position[1];
-            successive_node.parent = &current_node;
-            successive_node.cost_g = calculateGCost(current_node, motion_command);
-            successive_node.cost_h = calculateHuristicCost(successive_node, goal_node);
+            
+            // Calculate costs for the potential new path
+            float new_g_cost = calculateGCost(current_node, motion_command);
+            float heuristic_cost = calculateHuristicCost(successive_node, goal_node);
 
-            if (successive_node.isUninitialized() || (successive_node.isOpen() && (successive_node.cost_h + successive_node.cost_g) < (current_node.cost_h + current_node.cost_g)))
+            if (successive_node.isUninitialized() || (successive_node.isOpen() && new_g_cost < successive_node.cost_g))
             {
+                successive_node.row = expansion_position[0];
+                successive_node.col = expansion_position[1];
+                successive_node.parent = &current_node;
+                successive_node.cost_g = new_g_cost;
+                successive_node.cost_h = heuristic_cost;
                 successive_node.setOpen();
                 openset.push(&successive_node);
             }
@@ -178,7 +182,7 @@ float AStarPlanner::calculateHuristicCost(const Node& current_node, const Node& 
     static const float sqrt2 = std::sqrt(2.0f);
     std::size_t dx = current_node.row > goal_node.row ? current_node.row - goal_node.row : goal_node.row - current_node.row;
     std::size_t dy = current_node.col > goal_node.col ? current_node.col - goal_node.col : goal_node.col - current_node.col;
-    std::size_t square_side_length = std::max(dx, dy);
+    std::size_t square_side_length = std::min(dx, dy);
     std::size_t residual_length = dx > dy ? dx - dy : dy - dx;
     return static_cast<float>(square_side_length) * sqrt2 + static_cast<float>(residual_length);
 }
