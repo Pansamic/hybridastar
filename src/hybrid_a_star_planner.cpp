@@ -48,7 +48,7 @@ void HybridAStarPlanner::setCostWeights(
     cost_weight_hybrid_ = cost_weight_hybrid;
 }
 
-HybridAStarPlanner::ErrorCode HybridAStarPlanner::setMapParameters(
+bool HybridAStarPlanner::setMapParameters(
     float map_resolution,
     float map_x_min,
     float map_y_min,
@@ -66,7 +66,7 @@ HybridAStarPlanner::ErrorCode HybridAStarPlanner::setMapParameters(
 
     if (map_grid_rows_ != map_obstacles.rows() || map_grid_cols_ != map_obstacles.cols())
     {
-        return ErrorCode::INVALID_ARGUMENT;
+        return false;
     }
 
     map_obstacles_ = std::move(map_obstacles);
@@ -97,11 +97,10 @@ HybridAStarPlanner::ErrorCode HybridAStarPlanner::setMapParameters(
     auto map_obstacles_copy = map_obstacles_;
     a_star_planner_.setMapParameters(map_resolution, map_x_min, map_y_min, map_x_max, map_y_max, std::move(map_obstacles_copy));
 
-    return ErrorCode::SUCCESS;
+    return true;
 }
 
-std::expected<const HybridAStarPlanner::Node*, HybridAStarPlanner::ErrorCode>
-HybridAStarPlanner::findPath(const std::array<float, 3>& start_state, const std::array<float, 3>& goal_state)
+HybridAStarPlanner::Node* HybridAStarPlanner::findPath(const std::array<float, 3>& start_state, const std::array<float, 3>& goal_state)
 {
     // Setup a maximum iteration count to avoid infinite loops
     const std::size_t max_iterations = 10000;
@@ -153,10 +152,9 @@ HybridAStarPlanner::findPath(const std::array<float, 3>& start_state, const std:
         }
 
         // Search for dubins shot
-        auto dubins_shot_result = getDubinsShot(current_node_ptr, &goal_node);
-        if (dubins_shot_result.has_value())
+        auto dubins_goal_node_ptr = getDubinsShot(current_node_ptr, &goal_node);
+        if (dubins_goal_node_ptr != nullptr)
         {
-            const Node* dubins_goal_node_ptr = dubins_shot_result.value();
             if (isNodeXYTEqual(*dubins_goal_node_ptr, goal_node))
             {
                 return dubins_goal_node_ptr;
@@ -166,13 +164,7 @@ HybridAStarPlanner::findPath(const std::array<float, 3>& start_state, const std:
         // Search for forward simulation
         for (auto& motion_command : motion_commands_)
         {
-            auto expansion_result = getExpandedState(*current_node_ptr, motion_command);
-            if (!expansion_result.has_value())
-            {
-                // Error Handling
-                continue;
-            }
-            std::array<float, 3> expansion_state = expansion_result.value();
+            auto expansion_state = getExpandedState(*current_node_ptr, motion_command);
 
             // If node is out of map or collide with obstacles
             if (!checkGeometry(expansion_state[0], expansion_state[1], expansion_state[2]) || checkCollision(expansion_state[0], expansion_state[1], expansion_state[2]))
@@ -273,18 +265,16 @@ float HybridAStarPlanner::calculateHuristicCost(const Node& current_node, const 
     std::array<float, 2> start_pos_2d{current_node.x, current_node.y};
     std::array<float, 2> goal_pos_2d{goal_node.x, goal_node.y};
 
-    auto a_star_result = a_star_planner_.findPath(start_pos_2d, goal_pos_2d);
-    if (!a_star_result.has_value())
+    auto a_star_end_node_ptr = a_star_planner_.findPath(start_pos_2d, goal_pos_2d);
+    if (a_star_end_node_ptr == nullptr)
     {
         return std::numeric_limits<float>::max();
     }
-    auto a_star_end_node_ptr = a_star_result.value();
-    auto a_star_path_result = a_star_planner_.getPathLength(a_star_end_node_ptr);
-    if (!a_star_path_result.has_value())
+    auto distance_cost = a_star_planner_.getPathLength(a_star_end_node_ptr);
+    if (distance_cost < 0.0)
     {
         return std::numeric_limits<float>::max();
     }
-    float distance_cost = a_star_path_result.value();
 
     // To avoid creating a new A* planner every time, we'll use a more efficient huristic like Euclidean distance
     // float dx = goal_node.x - current_node.x;
@@ -302,8 +292,7 @@ float HybridAStarPlanner::calculateHuristicCost(const Node& current_node, const 
     return std::max(distance_cost, static_cast<float>(dubins_cost));
 }
 
-std::expected<std::array<float, 3>, HybridAStarPlanner::ErrorCode>
-HybridAStarPlanner::getExpandedState(const Node& current_node, const MotionCommand& motion_command)
+std::array<float, 3> HybridAStarPlanner::getExpandedState(const Node& current_node, const MotionCommand& motion_command)
 {
     std::array<float, 3> expanded_state;
 
@@ -320,8 +309,7 @@ HybridAStarPlanner::getExpandedState(const Node& current_node, const MotionComma
     return expanded_state;
 }
 
-std::expected<HybridAStarPlanner::Node*, HybridAStarPlanner::ErrorCode>
-HybridAStarPlanner::getDubinsShot(Node* start_node, Node* goal_node)
+HybridAStarPlanner::Node* HybridAStarPlanner::getDubinsShot(Node* start_node, Node* goal_node)
 {
     DubinsCurve dubins;
 
@@ -335,7 +323,7 @@ HybridAStarPlanner::getDubinsShot(Node* start_node, Node* goal_node)
                                       static_cast<double>(goal_node->yaw)};
     if (dubins.init(start_state, goal_state, vehicle_turning_radius))
     {
-        return std::unexpected(ErrorCode::NO_PATH);
+        return nullptr;
     }
 
     const float& dubins_step_length = map_resolution_;
@@ -354,7 +342,7 @@ HybridAStarPlanner::getDubinsShot(Node* start_node, Node* goal_node)
         dubins.pathSample(dubins_sample_length, state);
         if (!checkGeometry(state[0], state[1], state[2]) || checkCollision(state[0], state[1], state[2]))
         {
-            return std::unexpected(ErrorCode::NO_PATH);
+            return nullptr;
         }
         Node& node = dubins_path_node_pool_.emplace_back(state[0], state[1], state[2]);
         if (is_first)
@@ -493,11 +481,10 @@ std::vector<std::array<float, 3>> HybridAStarPlanner::getPathWaypoints(const Nod
 
 std::vector<std::array<float, 3>> HybridAStarPlanner::plan(const std::array<float, 3>& start_state, const std::array<float, 3>& goal_state)
 {
-    auto find_path_result = findPath(start_state, goal_state);
-    if (!find_path_result.has_value())
+    auto end_node_ptr = findPath(start_state, goal_state);
+    if (end_node_ptr == nullptr)
     {
         return std::vector<std::array<float, 3>>();
     }
-    auto end_node_ptr = find_path_result.value();
     return getPathWaypoints(end_node_ptr);
 }

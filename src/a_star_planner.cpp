@@ -2,18 +2,16 @@
 #include <hybridastar/a_star_planner.h>
 
 const std::array<std::array<int8_t, 2>, 8> AStarPlanner::motion_commands_ =
-{{
-    { 0, -1},
-    { 0,  1},
-    { 1,  0},
-    {-1,  0},
-    {-1, -1},
-    {-1,  1},
-    { 1, -1},
-    { 1,  1}
-}};
+    {{{0, -1},
+      {0, 1},
+      {1, 0},
+      {-1, 0},
+      {-1, -1},
+      {-1, 1},
+      {1, -1},
+      {1, 1}}};
 
-void AStarPlanner::setMapParameters(float map_resolution, float map_x_min, float map_y_min, float map_x_max, float map_y_max, Eigen::Matrix<uint8_t, Eigen::Dynamic, Eigen::Dynamic>&& map_obstacles)
+void AStarPlanner::setMapParameters(float map_resolution, float map_x_min, float map_y_min, float map_x_max, float map_y_max, Eigen::Matrix<uint8_t, Eigen::Dynamic, Eigen::Dynamic> &&map_obstacles)
 {
     map_x_min_ = map_x_min;
     map_y_min_ = map_y_min;
@@ -25,8 +23,17 @@ void AStarPlanner::setMapParameters(float map_resolution, float map_x_min, float
     map_obstacles_ = std::move(map_obstacles);
 }
 
-std::expected<const AStarPlanner::Node*, AStarPlanner::ErrorCode>
-AStarPlanner::findPath(const std::array<float, 2>& start_pos, const std::array<float, 2>& goal_pos)
+std::vector<std::array<float, 2>> AStarPlanner::plan(const std::array<float, 2>& start_pos, const std::array<float, 2>& goal_pos)
+{
+    auto end_node_ptr = findPath(start_pos, goal_pos);
+    if (end_node_ptr == nullptr)
+    {
+        return std::vector<std::array<float, 2>>{};
+    }
+    return getPathWaypoints(end_node_ptr);
+}
+
+AStarPlanner::Node *AStarPlanner::findPath(const std::array<float, 2> &start_pos, const std::array<float, 2> &goal_pos)
 {
     // Convert the start and goal position to grid index
     auto [start_row, start_col] = calculateGridIndexFromCoordinate(start_pos[0], start_pos[1]);
@@ -37,15 +44,15 @@ AStarPlanner::findPath(const std::array<float, 2>& start_pos, const std::array<f
     node_pool_.resize(map_grid_rows_ * map_grid_cols_);
 
     // Prepare open set
-    std::priority_queue<Node*, std::vector<Node*>, Node> openset;
+    std::priority_queue<Node *, std::vector<Node *>, Node> openset;
 
     // Setup start node
-    Node& start_node = node_pool_[getNodeID(start_row, start_col)];
+    Node &start_node = node_pool_[getNodeID(start_row, start_col)];
     start_node.row = start_row;
     start_node.col = start_col;
 
     // Setup goal node
-    Node& goal_node = node_pool_[getNodeID(goal_row, goal_col)];
+    Node &goal_node = node_pool_[getNodeID(goal_row, goal_col)];
     goal_node.row = goal_row;
     goal_node.col = goal_col;
 
@@ -53,10 +60,10 @@ AStarPlanner::findPath(const std::array<float, 2>& start_pos, const std::array<f
     start_node.setOpen();
     openset.push(&start_node);
 
-    while(!openset.empty())
+    while (!openset.empty())
     {
-        Node* current_node_ptr = openset.top();
-        Node& current_node = *current_node_ptr;
+        Node *current_node_ptr = openset.top();
+        Node &current_node = *current_node_ptr;
         openset.pop();
 
         if (current_node.isClosed())
@@ -71,29 +78,20 @@ AStarPlanner::findPath(const std::array<float, 2>& start_pos, const std::array<f
             return current_node_ptr;
         }
 
-        for (const auto& motion_command : motion_commands_)
+        for (const auto &motion_command : motion_commands_)
         {
-            auto expansion_result = getExpandedPosition(current_node, motion_command);
-            if (!expansion_result.has_value())
+            auto expansion_position = getExpandedPosition(current_node, motion_command);
+            if (expansion_position[0] == std::numeric_limits<std::size_t>::max() && expansion_position[1] == std::numeric_limits<std::size_t>::max())
             {
-                switch(expansion_result.error())
-                {
-                case ErrorCode::COLLISION:
-                    continue;
-                case ErrorCode::INVALID_GEOMETRY:
-                    continue;
-                default:
-                    continue;
-                }
+                continue;
             }
-            auto expansion_position = expansion_result.value();
 
-            Node& successive_node = node_pool_[getNodeID(expansion_position[0], expansion_position[1])];
+            Node &successive_node = node_pool_[getNodeID(expansion_position[0], expansion_position[1])];
             if (successive_node.isClosed())
             {
                 continue;
             }
-            
+
             // Calculate costs for the potential new path
             float new_g_cost = calculateGCost(current_node, motion_command);
             float heuristic_cost = calculateHuristicCost(successive_node, goal_node);
@@ -111,16 +109,37 @@ AStarPlanner::findPath(const std::array<float, 2>& start_pos, const std::array<f
         }
     }
 
-    return std::unexpected(ErrorCode::NO_PATH);
+    return nullptr;
 }
 
-std::expected<float, AStarPlanner::ErrorCode> AStarPlanner::getPathLength(const Node* end_node_ptr)
+float AStarPlanner::getPathLength(const Node *end_node_ptr)
 {
     if (end_node_ptr == nullptr)
     {
-        return std::unexpected(ErrorCode::INVALID_ARGUMENT);
+        return -1.0;
     }
     return end_node_ptr->cost_g;
+}
+
+std::vector<std::array<float, 2>> AStarPlanner::getPathWaypoints(const Node* end_node_ptr)
+{
+    std::vector<std::array<float, 2>> path;
+    const Node *current = end_node_ptr;
+
+    while (current != nullptr)
+    {
+        // Convert grid indices back to coordinates
+        float x = (current->row + 0.5f) * map_resolution_ + map_x_min_; // Adding 0.5 for cell center
+        float y = (current->col + 0.5f) * map_resolution_ + map_y_min_; // Adding 0.5 for cell center
+
+        // For A* path, theta is not meaningful, so set to 0
+        path.emplace_back(std::array<float, 2>{x, y});
+        current = current->parent;
+    }
+
+    // Reverse the path since we built it backwards
+    std::reverse(path.begin(), path.end());
+    return path;
 }
 
 inline std::size_t AStarPlanner::getNodeID(std::size_t row, std::size_t col) const
@@ -153,31 +172,30 @@ inline std::tuple<std::size_t, std::size_t> AStarPlanner::calculateGridIndexFrom
     return std::make_tuple(row, col);
 }
 
-std::expected<std::array<std::size_t, 2>, AStarPlanner::ErrorCode>
-AStarPlanner::getExpandedPosition(const Node& current_node, const std::array<int8_t, 2>& motion_command)
+std::array<std::size_t, 2> AStarPlanner::getExpandedPosition(const Node &current_node, const std::array<int8_t, 2> &motion_command)
 {
     std::array<std::size_t, 2> expansion_position;
     expansion_position[0] = current_node.row + motion_command[0];
     expansion_position[1] = current_node.col + motion_command[1];
     if (!checkGeometry(expansion_position[0], expansion_position[1]))
     {
-        return std::unexpected(ErrorCode::INVALID_GEOMETRY);
+        return {std::numeric_limits<std::size_t>::max(), std::numeric_limits<std::size_t>::max()};
     }
     if (checkCollision(expansion_position[0], expansion_position[1]))
     {
-        return std::unexpected(ErrorCode::COLLISION);
+        return {std::numeric_limits<std::size_t>::max(), std::numeric_limits<std::size_t>::max()};
     }
     return expansion_position;
 }
 
-float AStarPlanner::calculateGCost(const Node& prev_node, const std::array<int8_t, 2>& motion_command) const
+float AStarPlanner::calculateGCost(const Node &prev_node, const std::array<int8_t, 2> &motion_command) const
 {
     float cost = prev_node.cost_g;
     cost += std::hypot(motion_command[0], motion_command[1]);
     return cost;
 }
 
-float AStarPlanner::calculateHuristicCost(const Node& current_node, const Node& goal_node) const
+float AStarPlanner::calculateHuristicCost(const Node &current_node, const Node &goal_node) const
 {
     static const float sqrt2 = std::sqrt(2.0f);
     std::size_t dx = current_node.row > goal_node.row ? current_node.row - goal_node.row : goal_node.row - current_node.row;

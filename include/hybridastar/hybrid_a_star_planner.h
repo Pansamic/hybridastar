@@ -4,7 +4,6 @@
 
 #include <cstdint>
 #include <cmath>
-#include <expected>
 #include <array>
 #include <vector>
 #include <memory>
@@ -91,15 +90,6 @@ public:
         }
     };
 
-    enum class ErrorCode
-    {
-        SUCCESS = 0,
-        INVALID_ARGUMENT,
-        INVALID_GEOMETRY,
-        COLLISION,
-        NO_PATH
-    };
-
     explicit HybridAStarPlanner() = default;
     ~HybridAStarPlanner() = default;
     
@@ -118,7 +108,7 @@ public:
         float cost_weight_steering_angle,
         float cost_weight_steering_rate,
         float cost_weight_hybrid);
-    ErrorCode setMapParameters(
+    bool setMapParameters(
         float map_resolution,
         float map_x_min,
         float map_y_min,
@@ -183,12 +173,12 @@ private:
     std::tuple<std::size_t, std::size_t> calculateGridIndexFromCoordinate(float x, float y) const;
 
     void initializeMotionCommands();
-    std::expected<std::array<float, 3>, ErrorCode> getExpandedState(const Node& current_node, const MotionCommand& motion_command);
-    std::expected<Node*, ErrorCode> getDubinsShot(Node* start_node, Node* goal_node);
+    std::array<float, 3> getExpandedState(const Node& current_node, const MotionCommand& motion_command);
+    Node* getDubinsShot(Node* start_node, Node* goal_node);
     float calculateGCost(const Node& prev_node, const MotionCommand& motion_command) const;
     float calculateHuristicCost(const Node& current_node, const Node& goal_node);
     std::vector<std::array<float, 3>> getPathWaypoints(const Node* end_node_ptr);
-    std::expected<const Node*, ErrorCode> findPath(const std::array<float, 3>& start_state, const std::array<float, 3>& goal_state);
+    Node* findPath(const std::array<float, 3>& start_state, const std::array<float, 3>& goal_state);
 };
 
 #endif // __HYBRID_A_STAR_PLANNER_H__

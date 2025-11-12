@@ -29,28 +29,6 @@ bool isFreeCoordinate(const Eigen::Matrix<uint8_t, Eigen::Dynamic, Eigen::Dynami
     return map(row, col) == 0;
 }
 
-// Extract path from A* result node by following parent pointers
-std::vector<std::array<float, 3>> extractPath(const AStarPlanner::Node *end_node, float resolution, float x_min, float y_min)
-{
-    std::vector<std::array<float, 3>> path;
-    const AStarPlanner::Node *current = end_node;
-
-    while (current != nullptr)
-    {
-        // Convert grid indices back to coordinates
-        float x = (current->row + 0.5f) * resolution + x_min; // Adding 0.5 for cell center
-        float y = (current->col + 0.5f) * resolution + y_min; // Adding 0.5 for cell center
-
-        // For A* path, theta is not meaningful, so set to 0
-        path.push_back({x, y, 0.0f});
-        current = current->parent;
-    }
-
-    // Reverse the path since we built it backwards
-    std::reverse(path.begin(), path.end());
-    return path;
-}
-
 Eigen::Matrix<uint8_t, Eigen::Dynamic, Eigen::Dynamic> generateMap1()
 {
     std::size_t map_row = static_cast<std::size_t>((kMapYMax - kMapYMin) / kMapResolution);
@@ -85,15 +63,19 @@ int main()
     planner.setMapParameters(kMapResolution, kMapXMin, kMapYMin, kMapXMax, kMapYMax, std::move(map_copy));
 
     // Run A* planning
-    auto result = planner.findPath(start_pos, goal_pos);
+    auto path = planner.plan(start_pos, goal_pos);
 
-    if (result.has_value())
+    if (!path.empty())
     {
         std::cout << "A* path found!" << std::endl;
-
-        // Extract the full path
-        auto path = extractPath(result.value(), kMapResolution, kMapXMin, kMapYMin);
         std::cout << "Path length: " << path.size() << " waypoints" << std::endl;
+
+        std::vector<std::array<float, 3>> waypoints;
+
+        for (const auto &pathpoint : path)
+        {
+            waypoints.emplace_back(std::array<float, 3>{pathpoint[0], pathpoint[1], 0.0f});
+        }
 
         // Save map and path data to binary file
         MapAndPathData data;
@@ -108,7 +90,7 @@ int main()
 
         // Get map data
         data.map_data.assign(map.data(), map.data() + map.size());
-        data.path = path;
+        data.path = waypoints;
 
         // Set vehicle parameters (not used for A*, but stored for consistency)
         data.vehicle_wheelbase = 1.0f;

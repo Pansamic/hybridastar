@@ -4,7 +4,6 @@
 
 #include <cstdint>
 #include <cmath>
-#include <expected>
 #include <array>
 #include <vector>
 #include <memory>
@@ -71,22 +70,14 @@ public:
         }
     };
 
-    enum class ErrorCode
-    {
-        OK = 0,
-        INVALID_ARGUMENT,
-        INVALID_GEOMETRY,
-        COLLISION,
-        NO_PATH
-    };
-
     explicit AStarPlanner() = default;
     ~AStarPlanner() = default;
 
     void setMapParameters(float map_resolution, float map_x_min, float map_y_min, float map_x_max, float map_y_max, Eigen::Matrix<uint8_t, Eigen::Dynamic, Eigen::Dynamic>&& map_obstacles);
-    std::expected<const Node*, ErrorCode> findPath(const std::array<float, 2>& start_pos, const std::array<float, 2>& goal_pos);
-    std::expected<float, ErrorCode> getPathLength(const Node* end_node_ptr);
-
+    Node* findPath(const std::array<float, 2>& start_pos, const std::array<float, 2>& goal_pos);
+    float getPathLength(const Node* end_node_ptr);
+    std::vector<std::array<float, 2>> getPathWaypoints(const Node* end_node_ptr);
+    std::vector<std::array<float, 2>> plan(const std::array<float, 2>& start_pos, const std::array<float, 2>& goal_pos);
 private:
     /* Map Parameters */
     float map_resolution_;
@@ -109,7 +100,7 @@ private:
     inline std::tuple<float, float> calculateCoordinateFromGridIndex(std::size_t row, std::size_t col) const;
     inline std::tuple<std::size_t, std::size_t> calculateGridIndexFromCoordinate(float x, float y) const;
     
-    std::expected<std::array<std::size_t, 2>, ErrorCode> getExpandedPosition(const Node& current_node, const std::array<int8_t, 2>& motion_command);
+    std::array<std::size_t, 2> getExpandedPosition(const Node& current_node, const std::array<int8_t, 2>& motion_command);
     float calculateGCost(const Node& prev_node, const std::array<int8_t, 2>& motion_command) const;
     float calculateHuristicCost(const Node& current_node, const Node& goal_node) const;
 };

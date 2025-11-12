@@ -117,7 +117,7 @@ int main()
         // Run A* planning
         auto result = planner.findPath(start_pos, goal_pos);
 
-        if (result.has_value())
+        if (result != nullptr)
         {
             success_count++;
         }
