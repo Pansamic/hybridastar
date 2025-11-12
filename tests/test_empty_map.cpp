@@ -45,7 +45,7 @@ int main()
     auto map = generateSimpleMap();
     planner.setMapParameters(kMapResolution, kMapXMin, kMapYMin, kMapXMax, kMapYMax, std::move(map));
     planner.setVehicleParameters(kVehicleMaxSteeringAngle, kVehicleSteerPrecision, kVehicleWheelbase, kVehicleAxleToFront, kVehicleAxleToRear, kVehicleWidth, kVehicleEnableReverse);
-    auto path = planner.plan({{-8.0, -8.0, 0.0}}, {{8.0, 8.0, M_PI_2}});
+    auto path = planner.plan({{-6.0, -6.0, 0.0}}, {{6.0, 6.0, -M_PI_2}});
 
     // Save map and path data to binary file
     MapAndPathData data;
