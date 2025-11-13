@@ -73,7 +73,7 @@ public:
     explicit AStarPlanner() = default;
     ~AStarPlanner() = default;
 
-    void setMapParameters(float map_resolution, float map_x_min, float map_y_min, float map_x_max, float map_y_max, Eigen::Matrix<uint8_t, Eigen::Dynamic, Eigen::Dynamic>&& map_obstacles);
+    bool setMapParameters(float map_resolution, float map_x_min, float map_y_min, float map_x_max, float map_y_max, Eigen::Matrix<uint8_t, Eigen::Dynamic, Eigen::Dynamic>&& map_obstacles);
     Node* findPath(const std::array<float, 2>& start_pos, const std::array<float, 2>& goal_pos);
     float getPathLength(const Node* end_node_ptr);
     std::vector<std::array<float, 2>> getPathWaypoints(const Node* end_node_ptr);

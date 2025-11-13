@@ -11,16 +11,21 @@ const std::array<std::array<int8_t, 2>, 8> AStarPlanner::motion_commands_ =
       {1, -1},
       {1, 1}}};
 
-void AStarPlanner::setMapParameters(float map_resolution, float map_x_min, float map_y_min, float map_x_max, float map_y_max, Eigen::Matrix<uint8_t, Eigen::Dynamic, Eigen::Dynamic> &&map_obstacles)
+bool AStarPlanner::setMapParameters(float map_resolution, float map_x_min, float map_y_min, float map_x_max, float map_y_max, Eigen::Matrix<uint8_t, Eigen::Dynamic, Eigen::Dynamic> &&map_obstacles)
 {
     map_x_min_ = map_x_min;
     map_y_min_ = map_y_min;
     map_x_max_ = map_x_max;
     map_y_max_ = map_y_max;
     map_resolution_ = map_resolution;
-    map_grid_rows_ = static_cast<std::size_t>(std::ceil((map_y_max_ - map_y_min_) / map_resolution_));
-    map_grid_cols_ = static_cast<std::size_t>(std::ceil((map_x_max_ - map_x_min_) / map_resolution_));
+    map_grid_rows_ = static_cast<std::size_t>(std::lround((map_x_max_ - map_x_min_) / map_resolution_));
+    map_grid_cols_ = static_cast<std::size_t>(std::lround((map_y_max_ - map_y_min_) / map_resolution_));
+    if (map_grid_rows_ != map_obstacles.rows() || map_grid_cols_ != map_obstacles.cols())
+    {
+        return false;
+    }
     map_obstacles_ = std::move(map_obstacles);
+    return true;
 }
 
 std::vector<std::array<float, 2>> AStarPlanner::plan(const std::array<float, 2>& start_pos, const std::array<float, 2>& goal_pos)
@@ -38,6 +43,11 @@ AStarPlanner::Node *AStarPlanner::findPath(const std::array<float, 2> &start_pos
     // Convert the start and goal position to grid index
     auto [start_row, start_col] = calculateGridIndexFromCoordinate(start_pos[0], start_pos[1]);
     auto [goal_row, goal_col] = calculateGridIndexFromCoordinate(goal_pos[0], goal_pos[1]);
+
+    if (!checkGeometry(start_row, start_col) || !checkGeometry(goal_row, goal_col) || checkCollision(start_row, start_col) || checkCollision(goal_row, goal_col))
+    {
+        return nullptr;
+    }
 
     // Prepare node pool
     node_pool_.clear();
@@ -129,8 +139,7 @@ std::vector<std::array<float, 2>> AStarPlanner::getPathWaypoints(const Node* end
     while (current != nullptr)
     {
         // Convert grid indices back to coordinates
-        float x = (current->row + 0.5f) * map_resolution_ + map_x_min_; // Adding 0.5 for cell center
-        float y = (current->col + 0.5f) * map_resolution_ + map_y_min_; // Adding 0.5 for cell center
+        auto [x, y] = calculateCoordinateFromGridIndex(current->row, current->col);
 
         // For A* path, theta is not meaningful, so set to 0
         path.emplace_back(std::array<float, 2>{x, y});
@@ -160,15 +169,15 @@ inline bool AStarPlanner::checkCollision(std::size_t row, std::size_t col) const
 
 inline std::tuple<float, float> AStarPlanner::calculateCoordinateFromGridIndex(std::size_t row, std::size_t col) const
 {
-    float x = map_resolution_ / 2.0f + map_x_min_ + row * map_resolution_;
-    float y = map_resolution_ / 2.0f + map_y_min_ + col * map_resolution_;
+    float x = map_x_max_ - map_resolution_ / 2.0f - row * map_resolution_;
+    float y = map_y_max_ - map_resolution_ / 2.0f - col * map_resolution_;
     return std::make_tuple(x, y);
 }
 
 inline std::tuple<std::size_t, std::size_t> AStarPlanner::calculateGridIndexFromCoordinate(float x, float y) const
 {
-    std::size_t row = static_cast<std::size_t>(std::floor((x - map_x_min_) / map_resolution_));
-    std::size_t col = static_cast<std::size_t>(std::floor((y - map_y_min_) / map_resolution_));
+    std::size_t row = static_cast<std::size_t>(std::floor((map_x_max_ - x) / map_resolution_));
+    std::size_t col = static_cast<std::size_t>(std::floor((map_y_max_ - y) / map_resolution_));
     return std::make_tuple(row, col);
 }
 

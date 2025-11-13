@@ -59,8 +59,8 @@ bool HybridAStarPlanner::setMapParameters(
     map_y_min_ = map_y_min;
     map_x_max_ = map_x_max;
     map_y_max_ = map_y_max;
-    map_grid_rows_ = static_cast<std::size_t>(std::round((map_y_max - map_y_min) / map_resolution));
-    map_grid_cols_ = static_cast<std::size_t>(std::round((map_x_max - map_x_min) / map_resolution));
+    map_grid_rows_ = static_cast<std::size_t>(std::lround((map_x_max - map_x_min) / map_resolution));
+    map_grid_cols_ = static_cast<std::size_t>(std::lround((map_y_max - map_y_min) / map_resolution));
 
     if (map_grid_rows_ != map_obstacles.rows() || map_grid_cols_ != map_obstacles.cols())
     {
@@ -120,7 +120,8 @@ HybridAStarPlanner::Node* HybridAStarPlanner::findPath(const std::array<float, 3
     start_node.yaw = start_state[2];
     // start node has no motion command
 
-    Node &goal_node = node_pool_[getNodeID(goal_state[0], goal_state[1], goal_state[2])];
+    std::size_t goal_node_id = getNodeID(goal_state[0], goal_state[1], goal_state[2]);
+    Node &goal_node = node_pool_[goal_node_id];
     goal_node.x = goal_state[0];
     goal_node.y = goal_state[1];
     goal_node.yaw = goal_state[2];
@@ -148,7 +149,7 @@ HybridAStarPlanner::Node* HybridAStarPlanner::findPath(const std::array<float, 3
         // Remove lowest cost node from the open set
         openset.pop();
 
-        if (isNodeXYTEqual(current_node, goal_node))
+        if (isNodeEqual(current_node, goal_node))
         {
             return current_node_ptr;
         }
@@ -157,7 +158,7 @@ HybridAStarPlanner::Node* HybridAStarPlanner::findPath(const std::array<float, 3
         auto dubins_goal_node_ptr = getDubinsShot(current_node_ptr, &goal_node);
         if (dubins_goal_node_ptr != nullptr)
         {
-            if (isNodeXYTEqual(*dubins_goal_node_ptr, goal_node))
+            if (isNodeEqual(*dubins_goal_node_ptr, goal_node))
             {
                 return dubins_goal_node_ptr;
             }
@@ -182,17 +183,18 @@ HybridAStarPlanner::Node* HybridAStarPlanner::findPath(const std::array<float, 3
                 continue;
             }
 
-            // Build complete node.
             successive_node.x = expansion_state[0];
             successive_node.y = expansion_state[1];
             successive_node.yaw = expansion_state[2];
-            successive_node.cost_g = calculateGCost(current_node, motion_command);
-            successive_node.cost_h = calculateHuristicCost(successive_node, goal_node);
-            successive_node.motion = &motion_command;
-            successive_node.parent = current_node_ptr;
+            float G = calculateGCost(current_node, motion_command);
+            float H = calculateHuristicCost(successive_node, goal_node);
 
-            if (successive_node.isUninitialized() || (successive_node.isOpen() && (successive_node.cost_h + successive_node.cost_g) < (current_node.cost_h + current_node.cost_g)))
+            if (successive_node.isUninitialized() || (successive_node.isOpen() && (H + G) < (current_node.cost_h + current_node.cost_g)))
             {
+                successive_node.cost_g = G;
+                successive_node.cost_h = H;
+                successive_node.motion = &motion_command;
+                successive_node.parent = current_node_ptr;
                 successive_node.setOpen();
                 openset.push(&successive_node);
             }
@@ -221,15 +223,15 @@ void HybridAStarPlanner::initializeMotionCommands()
 
 std::tuple<float, float> HybridAStarPlanner::calculateCoordinateFromGridIndex(std::size_t row, std::size_t col) const
 {
-    float x = map_resolution_ / 2.0f + map_x_min_ + row * map_resolution_;
-    float y = map_resolution_ / 2.0f + map_y_min_ + col * map_resolution_;
+    float x = map_x_max_ - map_resolution_ / 2.0f - row * map_resolution_;
+    float y = map_y_max_ - map_resolution_ / 2.0f - col * map_resolution_;
     return std::make_tuple(x, y);
 }
 
 std::tuple<std::size_t, std::size_t> HybridAStarPlanner::calculateGridIndexFromCoordinate(float x, float y) const
 {
-    std::size_t row = static_cast<std::size_t>(std::floor((x - map_x_min_) / map_resolution_));
-    std::size_t col = static_cast<std::size_t>(std::floor((y - map_y_min_) / map_resolution_));
+    std::size_t row = static_cast<std::size_t>(std::floor((map_x_max_ - x) / map_resolution_));
+    std::size_t col = static_cast<std::size_t>(std::floor((map_y_max_ - y) / map_resolution_));
     return std::make_tuple(row, col);
 }
 
@@ -457,7 +459,7 @@ inline float HybridAStarPlanner::getPositiveNormalizedRadianAngle(const float& a
     return result;
 }
 
-inline bool HybridAStarPlanner::isNodeXYTEqual(const Node& node_a, const Node& node_b)
+inline bool HybridAStarPlanner::isNodeEqual(const Node& node_a, const Node& node_b)
 {
     return (static_cast<int>(node_a.x / map_resolution_) == static_cast<int>(node_b.x / map_resolution_)) &&
             (static_cast<int>(node_a.y / map_resolution_) == static_cast<int>(node_b.y / map_resolution_)) &&
@@ -478,6 +480,7 @@ std::vector<std::array<float, 3>> HybridAStarPlanner::getPathWaypoints(const Nod
         path.push_back(std::array<float, 3>{current_node_ptr->x, current_node_ptr->y, current_node_ptr->yaw});
         current_node_ptr = current_node_ptr->parent;
     }
+    std::reverse(path.begin(), path.end());
     return path;
 }
 

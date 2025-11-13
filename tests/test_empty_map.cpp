@@ -28,8 +28,8 @@ static const float kMapYMax = 10.0;
 
 Eigen::Matrix<uint8_t, Eigen::Dynamic, Eigen::Dynamic> generateSimpleMap()
 {
-    std::size_t map_row = static_cast<std::size_t>((kMapYMax - kMapYMin) / kMapResolution);
-    std::size_t map_col = static_cast<std::size_t>((kMapXMax - kMapXMin) / kMapResolution);
+    std::size_t map_row = static_cast<std::size_t>(std::lround((kMapXMax - kMapXMin) / kMapResolution));
+    std::size_t map_col = static_cast<std::size_t>(std::lround((kMapYMax - kMapYMin) / kMapResolution));
     Eigen::Matrix<uint8_t, Eigen::Dynamic, Eigen::Dynamic> map(map_row, map_col);
     map.setZero(); // completely free space
 
@@ -43,7 +43,8 @@ int main()
     planner.setCostWeights(kCostWeightReverse, kCostWeightDirectionChange, kCostWeightSteeringAngle, kCostWeightSteeringRate, kCostWeightHybrid);
 
     auto map = generateSimpleMap();
-    planner.setMapParameters(kMapResolution, kMapXMin, kMapYMin, kMapXMax, kMapYMax, std::move(map));
+    auto map_copy = map;
+    planner.setMapParameters(kMapResolution, kMapXMin, kMapYMin, kMapXMax, kMapYMax, std::move(map_copy));
     planner.setVehicleParameters(kVehicleMaxSteeringAngle, kVehicleSteerPrecision, kVehicleWheelbase, kVehicleAxleToFront, kVehicleAxleToRear, kVehicleWidth, kVehicleEnableReverse);
     auto path = planner.plan({{-6.0, -6.0, 0.0}}, {{6.0, 6.0, -M_PI_2}});
 
@@ -55,13 +56,10 @@ int main()
     data.x_max = kMapXMax;
     data.y_min = kMapYMin;
     data.y_max = kMapYMax;
-    data.rows = static_cast<std::size_t>((kMapYMax - kMapYMin) / kMapResolution);
-    data.cols = static_cast<std::size_t>((kMapXMax - kMapXMin) / kMapResolution);
+    data.rows = map.rows();
+    data.cols = map.cols();
 
-    // Get map data from the planner
-    // Since the map is not directly accessible, we'll use the generated map
-    auto generated_map = generateSimpleMap();
-    data.map_data.assign(generated_map.data(), generated_map.data() + generated_map.size());
+    data.map_data.assign(map.data(), map.data() + map.size());
 
     data.path = path;
 

@@ -168,7 +168,7 @@ private:
     bool checkGeometry(float x, float y, float yaw) const;
     bool checkCollision(float x, float y, float yaw) const;
     inline float getPositiveNormalizedRadianAngle(const float& angle);
-    inline bool isNodeXYTEqual(const Node& node_a, const Node& node_b);
+    inline bool isNodeEqual(const Node& node_a, const Node& node_b);
     std::tuple<float, float> calculateCoordinateFromGridIndex(std::size_t row, std::size_t col) const;
     std::tuple<std::size_t, std::size_t> calculateGridIndexFromCoordinate(float x, float y) const;
 
