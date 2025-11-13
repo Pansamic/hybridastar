@@ -57,6 +57,10 @@ if (BUILD_TESTS)
     target_include_directories(test_obstacle_map PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
     target_link_libraries(test_obstacle_map PRIVATE ${PROJECT_NAME})
 
+    add_executable(test_real_map tests/test_real_map.cpp)
+    target_include_directories(test_real_map PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+    target_link_libraries(test_real_map PRIVATE ${PROJECT_NAME})
+
     add_executable(test_a_star tests/test_a_star.cpp)
     target_include_directories(test_a_star PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
     target_link_libraries(test_a_star PRIVATE ${PROJECT_NAME})
@@ -65,7 +69,7 @@ if (BUILD_TESTS)
     target_include_directories(test_a_star_save PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
     target_link_libraries(test_a_star_save PRIVATE ${PROJECT_NAME})
 
-    install(TARGETS test_empty_map test_obstacle_map test_a_star test_a_star_save
+    install(TARGETS test_empty_map test_obstacle_map test_real_map test_a_star test_a_star_save
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()
 
