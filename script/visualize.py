@@ -65,12 +65,8 @@ def load_map_and_path_data(filename):
         map_size = struct.unpack('Q', f.read(8))[0]  # size_t (using Q for unsigned long long, 8 bytes)
 
         # Read map data
-        map_data = []
-        for _ in range(map_size):
-            value = struct.unpack('B', f.read(1))[0]  # uint8_t
-            map_data.append(value)
-        
-        map_data = np.array(map_data, dtype=np.uint8).reshape((rows, cols))
+        map_data = np.frombuffer(f.read(map_size), dtype=np.uint8)
+        map = map_data.reshape((cols, rows)).T
 
         # Read path size
         path_size = struct.unpack('Q', f.read(8))[0]  # size_t (using Q for unsigned long long, 8 bytes)
@@ -91,7 +87,7 @@ def load_map_and_path_data(filename):
 
         return {
             'algorithm_type': algorithm_type,
-            'map': map_data,
+            'map': map,
             'resolution': resolution,
             'x_min': x_min,
             'x_max': x_max,
@@ -160,10 +156,20 @@ def visualize_map_and_path(filename):
     
     fig, ax = plt.subplots(figsize=(12, 10))
     
-    # Display the map with proper orientation
-    # Flip the map vertically to match the coordinate system (image y-axis is inverted)
-    ax.imshow(data['map'], cmap='gray', origin='lower', 
-              extent=[data['x_min'], data['x_max'], data['y_min'], data['y_max']])
+    # Create coordinate arrays for pcolormesh
+    x_coords = np.linspace(data['x_min'], data['x_max'], data['rows'] + 1)
+    y_coords = np.linspace(data['y_min'], data['y_max'], data['cols'] + 1)
+    # x_coords = np.arange(data['x_min'], data['x_max'], data['resolution'])
+    # y_coords = np.arange(data['y_min'], data['y_max'], data['resolution'])
+    # x_coords = np.arange(data['rows']) * data['resolution'] + data['x_min']
+    # y_coords = np.arange(data['cols']) * data['resolution'] + data['y_min']
+    X, Y = np.meshgrid(x_coords, y_coords)
+    
+    vis_map_data = np.rot90(data['map'], k=1, axes=(1, 0))
+    vis_map_data = np.flipud(vis_map_data)
+
+    # Display the map with pcolormesh
+    ax.pcolormesh(X, Y, vis_map_data, cmap='gray', shading='auto')
     
     # Draw the path if it exists
     if len(data['path']) > 0:
@@ -203,6 +209,7 @@ def visualize_map_and_path(filename):
 
     ax.set_xlabel('X (m)')
     ax.set_ylabel('Y (m)')
+    ax.set_aspect('equal', adjustable='box')
     
     # Set title based on algorithm type
     algorithm_name = "A*" if data['algorithm_type'] == 0 else "Hybrid A*"
