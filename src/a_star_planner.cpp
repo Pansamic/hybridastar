@@ -11,6 +11,16 @@ const std::array<std::array<int8_t, 2>, 8> AStarPlanner::motion_commands_ =
       {1, -1},
       {1, 1}}};
 
+/**
+ * @brief Set map parameters for path planning
+ * @param map_resolution Map resolution in meters per cell
+ * @param map_x_min Minimum x coordinate of map
+ * @param map_y_min Minimum y coordinate of map
+ * @param map_x_max Maximum x coordinate of map
+ * @param map_y_max Maximum y coordinate of map
+ * @param map_obstacles Obstacle map matrix
+ * @return True if parameters were set successfully
+ */
 bool AStarPlanner::setMapParameters(float map_resolution, float map_x_min, float map_y_min, float map_x_max, float map_y_max, Eigen::Matrix<uint8_t, Eigen::Dynamic, Eigen::Dynamic> &&map_obstacles)
 {
     map_x_min_ = map_x_min;
@@ -28,6 +38,12 @@ bool AStarPlanner::setMapParameters(float map_resolution, float map_x_min, float
     return true;
 }
 
+/**
+ * @brief Plan path from start to goal
+ * @param start_pos Start position [x, y]
+ * @param goal_pos Goal position [x, y]
+ * @return Vector of waypoints forming the path
+ */
 std::vector<std::array<float, 2>> AStarPlanner::plan(const std::array<float, 2>& start_pos, const std::array<float, 2>& goal_pos)
 {
     auto end_node_ptr = findPath(start_pos, goal_pos);
@@ -38,6 +54,12 @@ std::vector<std::array<float, 2>> AStarPlanner::plan(const std::array<float, 2>&
     return getPathWaypoints(end_node_ptr);
 }
 
+/**
+ * @brief Find path between start and goal positions
+ * @param start_pos Start position [x, y]
+ * @param goal_pos Goal position [x, y]
+ * @return Pointer to goal node if path found, nullptr otherwise
+ */
 AStarPlanner::Node *AStarPlanner::findPath(const std::array<float, 2> &start_pos, const std::array<float, 2> &goal_pos)
 {
     // Convert the start and goal position to grid index
@@ -122,6 +144,11 @@ AStarPlanner::Node *AStarPlanner::findPath(const std::array<float, 2> &start_pos
     return nullptr;
 }
 
+/**
+ * @brief Get path length from start to end node
+ * @param end_node_ptr Pointer to end node
+ * @return Path length, or -1 if node is null
+ */
 float AStarPlanner::getPathLength(const Node *end_node_ptr)
 {
     if (end_node_ptr == nullptr)
@@ -131,6 +158,11 @@ float AStarPlanner::getPathLength(const Node *end_node_ptr)
     return end_node_ptr->cost_g;
 }
 
+/**
+ * @brief Extract waypoints from path
+ * @param end_node_ptr Pointer to end node
+ * @return Vector of waypoints as [x, y] coordinates
+ */
 std::vector<std::array<float, 2>> AStarPlanner::getPathWaypoints(const Node* end_node_ptr)
 {
     std::vector<std::array<float, 2>> path;
@@ -151,22 +183,46 @@ std::vector<std::array<float, 2>> AStarPlanner::getPathWaypoints(const Node* end
     return path;
 }
 
+/**
+ * @brief Get unique node identifier based on position
+ * @param row Grid row index
+ * @param col Grid column index
+ * @return Unique node ID
+ */
 inline std::size_t AStarPlanner::getNodeID(std::size_t row, std::size_t col) const
 {
     // col-major index
     return col * map_grid_rows_ + row;
 }
 
+/**
+ * @brief Check if grid position is within map bounds
+ * @param row Grid row index
+ * @param col Grid column index
+ * @return True if position is valid
+ */
 inline bool AStarPlanner::checkGeometry(std::size_t row, std::size_t col) const
 {
     return (row >= 0 && row < map_grid_rows_) && (col >= 0 && col < map_grid_cols_);
 }
 
+/**
+ * @brief Check if grid cell contains obstacle
+ * @param row Grid row index
+ * @param col Grid column index
+ * @return True if cell contains obstacle
+ */
 inline bool AStarPlanner::checkCollision(std::size_t row, std::size_t col) const
 {
     return (map_obstacles_(row, col) == 1);
 }
 
+/**
+ * @brief Convert grid indices to world coordinates
+ * @param row Grid row index
+ * @param col Grid column index
+ * @return Tuple of (x, y) world coordinates
+ */
 inline std::tuple<float, float> AStarPlanner::calculateCoordinateFromGridIndex(std::size_t row, std::size_t col) const
 {
     float x = map_x_max_ - map_resolution_ / 2.0f - row * map_resolution_;
@@ -174,6 +230,12 @@ inline std::tuple<float, float> AStarPlanner::calculateCoordinateFromGridIndex(s
     return std::make_tuple(x, y);
 }
 
+/**
+ * @brief Convert world coordinates to grid indices
+ * @param x World x coordinate
+ * @param y World y coordinate
+ * @return Tuple of (row, col) grid indices
+ */
 inline std::tuple<std::size_t, std::size_t> AStarPlanner::calculateGridIndexFromCoordinate(float x, float y) const
 {
     std::size_t row = static_cast<std::size_t>(std::floor((map_x_max_ - x) / map_resolution_));
@@ -181,6 +243,12 @@ inline std::tuple<std::size_t, std::size_t> AStarPlanner::calculateGridIndexFrom
     return std::make_tuple(row, col);
 }
 
+/**
+ * @brief Get expanded position based on motion command
+ * @param current_node Current node
+ * @param motion_command Motion command [dx, dy]
+ * @return Array with new position [row, col]
+ */
 std::array<std::size_t, 2> AStarPlanner::getExpandedPosition(const Node &current_node, const std::array<int8_t, 2> &motion_command)
 {
     std::array<std::size_t, 2> expansion_position;
@@ -197,6 +265,12 @@ std::array<std::size_t, 2> AStarPlanner::getExpandedPosition(const Node &current
     return expansion_position;
 }
 
+/**
+ * @brief Calculate movement cost between nodes
+ * @param prev_node Previous node
+ * @param motion_command Motion command used to reach new node
+ * @return Movement cost
+ */
 float AStarPlanner::calculateGCost(const Node &prev_node, const std::array<int8_t, 2> &motion_command) const
 {
     float cost = prev_node.cost_g;
@@ -204,6 +278,12 @@ float AStarPlanner::calculateGCost(const Node &prev_node, const std::array<int8_
     return cost;
 }
 
+/**
+ * @brief Calculate heuristic cost to goal using diagonal distance
+ * @param current_node Current node
+ * @param goal_node Goal node
+ * @return Heuristic cost
+ */
 float AStarPlanner::calculateHuristicCost(const Node &current_node, const Node &goal_node) const
 {
     static const float sqrt2 = std::sqrt(2.0f);
