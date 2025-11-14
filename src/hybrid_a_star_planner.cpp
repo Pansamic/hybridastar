@@ -547,19 +547,9 @@ bool HybridAStarPlanner::checkCollision(float x, float y, float yaw) const
  */
 inline float HybridAStarPlanner::getPositiveNormalizedRadianAngle(const float& angle)
 {
-    if(angle >= 0.0 && angle <= 2.0 * M_PI)
-    {
-        return angle;
-    }
-    if(angle >= -2.0 * M_PI && angle < 0.0)
-    {
-        return angle + 2.0 * M_PI;
-    }
-    float result = std::fmod(angle, 2.0 * M_PI);
-    if (result < 0.0)
-    {
-        result += 2.0 * M_PI;
-    }
+    float result = angle;
+    while (result > 2.0 * M_PI) result -= 2.0 * M_PI;
+    while (result < 0.0) result += 2.0 * M_PI;
     return result;
 }
 
@@ -570,19 +560,10 @@ inline float HybridAStarPlanner::getPositiveNormalizedRadianAngle(const float& a
  */
 inline float HybridAStarPlanner::getSymmetricNormalizedRadianAngle(const float& angle)
 {
-    if (angle >= -M_PI && angle <= M_PI)
-    {
-        return angle;
-    }
-    if (angle > M_PI && angle < 2.0 * M_PI)
-    {
-        return angle - 2.0 * M_PI;
-    }
-    if (angle > -2.0 * M_PI && angle <= -M_PI)
-    {
-        return angle + 2.0 * M_PI;
-    }
-    return std::fmod(angle, 2.0 * M_PI) - M_PI; 
+    float result = angle;
+    while (result > M_PI) result -= 2.0 * M_PI;
+    while (result < -M_PI) result += 2.0 * M_PI;
+    return result;
 }
 
 /**
