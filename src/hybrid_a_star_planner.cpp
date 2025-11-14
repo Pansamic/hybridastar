@@ -117,14 +117,14 @@ HybridAStarPlanner::Node* HybridAStarPlanner::findPath(const std::array<float, 3
     Node& start_node = node_pool_[getNodeID(start_state[0], start_state[1], start_state[2])];
     start_node.x = start_state[0];
     start_node.y = start_state[1];
-    start_node.yaw = start_state[2];
+    start_node.yaw = getSymmetricNormalizedRadianAngle(start_state[2]);
     // start node has no motion command
 
     std::size_t goal_node_id = getNodeID(goal_state[0], goal_state[1], goal_state[2]);
     Node &goal_node = node_pool_[goal_node_id];
     goal_node.x = goal_state[0];
     goal_node.y = goal_state[1];
-    goal_node.yaw = goal_state[2];
+    goal_node.yaw = getSymmetricNormalizedRadianAngle(goal_state[2]);
 
     start_node.setOpen();
     openset.push(&start_node);
@@ -308,7 +308,7 @@ std::array<float, 3> HybridAStarPlanner::getExpandedState(const Node& current_no
 
     expanded_state[0] = current_x + config_step_length_ * std::cos(current_yaw) * move_dir;
     expanded_state[1] = current_y + config_step_length_ * std::sin(current_yaw) * move_dir;
-    expanded_state[2] = getPositiveNormalizedRadianAngle(current_yaw + move_rot);
+    expanded_state[2] = getSymmetricNormalizedRadianAngle(current_yaw + move_rot);
     
     return expanded_state;
 }
@@ -457,6 +457,23 @@ inline float HybridAStarPlanner::getPositiveNormalizedRadianAngle(const float& a
         result += 2.0 * M_PI;
     }
     return result;
+}
+
+inline float HybridAStarPlanner::getSymmetricNormalizedRadianAngle(const float& angle)
+{
+    if (angle >= -M_PI && angle <= M_PI)
+    {
+        return angle;
+    }
+    if (angle > M_PI && angle < 2.0 * M_PI)
+    {
+        return angle - 2.0 * M_PI;
+    }
+    if (angle > -2.0 * M_PI && angle <= -M_PI)
+    {
+        return angle + 2.0 * M_PI;
+    }
+    return std::fmod(angle, 2.0 * M_PI) - M_PI; 
 }
 
 inline bool HybridAStarPlanner::isNodeEqual(const Node& node_a, const Node& node_b)
