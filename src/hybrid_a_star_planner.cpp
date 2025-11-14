@@ -433,7 +433,7 @@ HybridAStarPlanner::Node* HybridAStarPlanner::getDubinsShot(Node* start_node, No
         {
             return nullptr;
         }
-        Node& node = dubins_path_node_pool_.emplace_back(state[0], state[1], state[2]);
+        Node& node = dubins_path_node_pool_.emplace_back(state[0], state[1], getSymmetricNormalizedRadianAngle(state[2]));
         if (is_first)
         {
             node.parent = start_node;
@@ -576,8 +576,8 @@ inline bool HybridAStarPlanner::isNodeEqual(const Node& node_a, const Node& node
 {
     return (static_cast<int>(node_a.x / map_resolution_) == static_cast<int>(node_b.x / map_resolution_)) &&
             (static_cast<int>(node_a.y / map_resolution_) == static_cast<int>(node_b.y / map_resolution_)) &&
-            (std::abs(node_a.yaw - node_b.yaw) <= config_rotation_radian_step_ ||
-            std::abs(node_a.yaw - node_b.yaw) >= config_rotation_radian_step_negative_);
+            (getPositiveNormalizedRadianAngle(node_a.yaw - node_b.yaw) <= config_rotation_radian_step_ ||
+            getPositiveNormalizedRadianAngle(node_a.yaw - node_b.yaw) >= config_rotation_radian_step_negative_);
 }
 
 /**
